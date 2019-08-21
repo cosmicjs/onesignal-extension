@@ -6,10 +6,10 @@ export const getBucket = () => {
 
   if (window.bucket) return window.bucket;
 
-  const { bucket_slug } = queryString.parse(window.location.search);
+  const { bucket_slug, read_key, write_key} = queryString.parse(window.location.search);
 
   const Cosmic = cosmic();
-  window.bucket = Cosmic.bucket({ slug: bucket_slug });
+  window.bucket = Cosmic.bucket({ slug: bucket_slug, read_key: read_key, write_key: write_key });
   return window.bucket;
 };
 
@@ -28,9 +28,9 @@ export const getBucketInfo = async() => {
 
   if (window.bucket_data) return window.bucket_data;
 
-  const { bucket_slug } = queryString.parse(window.location.search);
+  const { bucket_slug, read_key, write_key} = queryString.parse(window.location.search);
   const Cosmic = cosmic();
-  const bucket = Cosmic.bucket({ slug: bucket_slug });
+  const bucket = Cosmic.bucket({ slug: bucket_slug, read_key: read_key, write_key: write_key });
    await bucket.getBucket().then(data => {
     window.bucket_data = data;
   })

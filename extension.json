@@ -1,5 +1,27 @@
 {
   "title": "One Signal Notifications",
   "font_awesome_class": "fa-bell",
-  "image_url": "https://cosmic-s3.imgix.net/f7eb1370-ba02-11e9-a1f9-995c7306bb69-svgporn-onesignal-removebg-preview.png?w=400&h=300&q=70"
+  "image_url": "https://cosmic-s3.imgix.net/f7eb1370-ba02-11e9-a1f9-995c7306bb69-svgporn-onesignal-removebg-preview.png?w=400&h=300&q=70",
+  "query_params": [
+    {
+      "key": "one_signal_api_id",
+      "value": ""
+    },
+    {
+      "key": "one_signal_rest_api_key",
+      "value": ""
+    },
+    {
+      "key": "notification_heading",
+      "value": ""
+    },
+    {
+      "key": "notification_content",
+      "value": ""
+    },
+    {
+      "key": "notification_url",
+      "value": ""
+    }
+  ]
 }

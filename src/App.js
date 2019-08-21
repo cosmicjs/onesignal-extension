@@ -1,8 +1,9 @@
 import React, { Component } from 'react';
-import { Container, Message, Icon, Button, Divider, Form, Dimmer, Loader, Segment } from 'semantic-ui-react';
+import { Container, Message, Icon, Divider, Dimmer, Loader, Segment } from 'semantic-ui-react';
 import { getBucket, getBucketInfo } from './utils/getBucket';
 import './App.css';
 import axios from 'axios';
+import queryString from 'query-string';
 
 const WEBHOOK_API_ENDPOINT = 'https://cosmic-onesignal-api.herokuapp.com';
 
@@ -12,107 +13,134 @@ class App extends Component {
     super(props);
     this.state = {
       id: "",
-      slug: "",
       onesignalapiid: "",
       onesignalrestapikey: "",
       onesignalnotificationheading: "",
       onesignalnotificationcontent: "",
-      addWebhookId: "",
-      bucketSlug:"",
+      notificationurl: "",
+      bucketSlug: "",
       isRemoveButtonEnabled: false,
-      loading: false
+      loading: false,
+      webhookLink: ""
     }
-  }
-
-  handleChanges = (evt) => {
-    this.setState({
-      [evt.target.name]: evt.target.value
-    })
   }
 
   async componentDidMount() {
-    const {bucket} = await getBucketInfo();
-    axios.get(`${WEBHOOK_API_ENDPOINT}/api/getBucketSlug/${bucket._id}`)
-      .then(response => {
-        if (response.data.object) {
+    const { one_signal_api_id, one_signal_rest_api_key, notification_heading, notification_content, write_key, notification_url } = queryString.parse(window.location.search);
+    this.setState({
+      onesignalapiid: one_signal_api_id !== "undefined" ? one_signal_api_id : "",
+      onesignalrestapikey: one_signal_rest_api_key !== "undefined" ? one_signal_rest_api_key : "",
+      onesignalnotificationheading: notification_heading !== "undefined" ? notification_heading : "",
+      onesignalnotificationcontent: notification_content !== "undefined" ? notification_content : "",
+      notificationurl: notification_url !== "undefined" ? notification_url : ""
+    });
+    const { bucket } = await getBucketInfo();
+    const isPresent = await this.isWebhookAdded();
+    if (!isPresent) {
+      if ((one_signal_api_id !== "" && one_signal_api_id !== "undefined") &&
+        (one_signal_rest_api_key !== "" && one_signal_rest_api_key !== "undefined") &&
+        (notification_heading !== "" && notification_heading !== "undefined") &&
+        (notification_content !== "" && notification_content !== "undefined") &&
+        (notification_url !== "" && notification_url !== "undefined")) {
+        this.showLoading();
+        const createId = await this.addWebhooks(this.state.onesignalapiid, this.state.onesignalrestapikey, this.state.onesignalnotificationheading,
+          this.state.onesignalnotificationcontent, this.state.notificationurl);
+        if (createId) {
+          await this.addWebHookParameterIntoExtension(write_key, bucket.slug, this.state.onesignalapiid, this.state.onesignalrestapikey, this.state.onesignalnotificationheading,
+            this.state.onesignalnotificationcontent, this.state.notificationurl);
           this.setState({
-            id: bucket._id,
-            slug: bucket._id,
-            onesignalapiid: response.data.object.metadata.onesignalapiid,
-            onesignalrestapikey: response.data.object.metadata.onesignalrestapikey,
-            onesignalnotificationheading: response.data.object.metadata.onesignalnotificationheading,
-            onesignalnotificationcontent: response.data.object.metadata.onesignalnotificationcontent,
-            addWebhookId: response.data.object.metadata.addWebhookId,
-            isRemoveButtonEnabled: response.data.object.metadata.onesignalapiid !== "" ? true : false,
-            bucketSlug: response.data.object.metadata.bucketSlug
-          })
-        }
-      });
-  }
-
-  saveBucketData = async (evt) => {
-    evt.preventDefault();
-    const {bucket} = await getBucketInfo();
-    const body = {
-      id: this.state.id === "" ? bucket._id : this.state.id,
-      slug: this.state.slug === "" ? bucket._id : this.state.slug,
-      onesignalapiid: this.state.onesignalapiid,
-      onesignalrestapikey: this.state.onesignalrestapikey,
-      onesignalnotificationheading: this.state.onesignalnotificationheading,
-      onesignalnotificationcontent: this.state.onesignalnotificationcontent,
-      addWebhookId: this.state.addWebhookId,
-      bucketSlug: this.state.bucketSlug === "" ? bucket.slug : this.state.bucketSlug
-    }
-
-    if (this.state.id === "") {
-      this.showLoading();
-      const createId = await this.addWebhooks();
-      body.addWebhookId = createId;
-      axios.post(`${WEBHOOK_API_ENDPOINT}/api/addBucketSlug`, body).then(
-        res => {
-          this.setState({
+            webhookLink: `https://cosmicjs.com/${bucket.slug}/webhooks`,
             isRemoveButtonEnabled: true,
             loading: false
-          })
+          });
         }
-      )
+      }
     }
-    else {
-      axios.post(`${WEBHOOK_API_ENDPOINT}/api/editBucketSlug`, body);
+    else{
+      console.log("Webhook is already added!!!!!");
+      this.setState({
+        webhookLink: `https://cosmicjs.com/${bucket.slug}/webhooks`,
+        isRemoveButtonEnabled: true,
+        loading: false
+      });
     }
   }
 
-  addWebhooks = async () => {
+  addWebhooks = async (apiid, restapikey, notificationheading, notificationcontent, notificationurl) => {
     const bucket = getBucket();
     const webhookData = await bucket.addWebhook({
-      endpoint: `${WEBHOOK_API_ENDPOINT}/api/create`,
+      endpoint: `${WEBHOOK_API_ENDPOINT}/api/create?apiid=${apiid}&restapikey=${restapikey}&notificationheading=${notificationheading}&notificationcontent=${notificationcontent}&notificationurl=${notificationurl}`,
       event: 'object.created.published',
     });
     return webhookData.webhook.id;
   }
 
-  removeBucket = async () => {
-    const {bucket} = await getBucketInfo();
-    this.showLoading();
-    axios.post(`${WEBHOOK_API_ENDPOINT}/api/removeBucketSlug/${bucket._id}`).then(
-      res => {
-        this.setState({
-          id: "",
-          slug: "",
-          onesignalapiid: "",
-          onesignalrestapikey: "",
-          onesignalnotificationheading: "",
-          onesignalnotificationcontent: "",
-          isRemoveButtonEnabled: false,
-          loading: false,
-          bucketSlug: ""
-        })
+  addWebHookParameterIntoExtension = async (write_key, bucket_slug, apiid, restapikey, notificationheading, notificationcontent, notificationurl) => {
+    const extensionId = await this.getOneSignalExtensionId();
+    if (extensionId !== null) {
+      const data = {
+        "write_key": write_key,
+        "query_params": [
+          {
+            "key": "one_signal_api_id",
+            "value": apiid
+          },
+          {
+            "key": "one_signal_rest_api_key",
+            "value": restapikey
+          },
+          {
+            "key": "notification_heading",
+            "value": notificationheading
+          },
+          {
+            "key": "notification_content",
+            "value": notificationcontent
+          },
+          {
+            "key": "notification_url",
+            "value": notificationurl
+          },
+          {
+            "key": "added_webhook",
+            "value": "true"
+          }
+        ]
       }
-    )
+      const url = `https://api.cosmicjs.com/v1/${bucket_slug}/extensions/${extensionId}`;
+      axios.put(url, data)
+        .then(response => {
+          console.log("response" + response);
+        })
+        .catch(error => {
+          console.log(error);
+        })
+    }
   }
 
-  showLoading =() =>{
-    this.setState({loading: true});
+  getOneSignalExtensionId = async () => {
+    const { bucket } = await getBucketInfo();
+    const { extensions } = bucket;
+    let oneSignalExtension = null;
+    if (extensions.length > 0) {
+      oneSignalExtension = extensions.find(x => x.title === "One Signal Notifications");
+    }
+    if (oneSignalExtension != null) {
+      return oneSignalExtension.id;
+    }
+    return oneSignalExtension;
+  }
+
+  isWebhookAdded = async () => {
+    const { added_webhook } = queryString.parse(window.location.search);
+    if(added_webhook){      
+      return true;
+    }
+    return false;
+  }
+
+  showLoading = () => {
+    this.setState({ loading: true });
   }
 
   render() {
@@ -144,53 +172,48 @@ class App extends Component {
             <Message.Header>Requires Authentication Key</Message.Header>
             <p>Requires your OneSignal App's REST API Key, available in <a href="https://documentation.onesignal.com/docs/accounts-and-keys#section-keys-ids" target="_blank" rel="noopener noreferrer">Keys & IDs</a></p>
           </Message>
-
-          <Form style={{ width: '50%' }} onSubmit={this.saveBucketData}>
-            <Form.Field>
-              <label>One Signal API Id</label>
-              <input
-                placeholder='one-signal-api-id'
-                name='onesignalapiid'
-                type="password"
-                value={this.state.onesignalapiid}
-                onChange={this.handleChanges}
-              />
-            </Form.Field>
-            <Form.Field>
-              <label>One Signal REST API Key</label>
-              <input
-                placeholder='one-signal-rest-api-key'
-                name='onesignalrestapikey'
-                type="password"
-                value={this.state.onesignalrestapikey}
-                onChange={this.handleChanges}
-              />
-            </Form.Field>
-            <Form.Field>
-              <label>Notification Heading</label>
-              <input
-                name='onesignalnotificationheading'
-                value={this.state.onesignalnotificationheading}
-                onChange={this.handleChanges}
-              />
-            </Form.Field>
-            <Form.Field>
-              <label>Notification Content</label>
-              <input
-                name='onesignalnotificationcontent'
-                value={this.state.onesignalnotificationcontent}
-                onChange={this.handleChanges}
-              />
-            </Form.Field>
-            <Button type='submit' primary>Submit</Button>
-          </Form>
+          {
+            (this.state.onesignalapiid === '' || this.state.onesignalapiid === undefined) &&
+            <Message negative>
+              <Icon name='info circle' size='big' />
+              Please add the <b>one_signal_api_id</b> into Extension Query Parameters section
+            </Message>
+          }
+          {
+            (this.state.onesignalrestapikey === '' || this.state.onesignalrestapikey === undefined) &&
+            <Message negative>
+              <Icon name='info circle' size='big' />
+              Please add the <b>one_signal_rest_api_key</b> into Extension Query Parameters section
+            </Message>
+          }
+          {
+            (this.state.onesignalnotificationheading === '' || this.state.onesignalnotificationheading === undefined) &&
+            <Message negative>
+              <Icon name='info circle' size='big' />
+              Please add the <b>notification_heading</b> into Extension Query Parameters section
+            </Message>
+          }
+          {
+            (this.state.onesignalnotificationcontent === '' || this.state.onesignalnotificationcontent === undefined) &&
+            <Message negative>
+              <Icon name='info circle' size='big' />
+              Please add the <b>notification_content</b> into Extension Query Parameters section
+            </Message>
+          }
+          {
+            (this.state.notificationurl === '' || this.state.notificationurl === undefined) &&
+            <Message negative>
+              <Icon name='info circle' size='big' />
+              Please add the <b>notification_url</b> into Extension Query Parameters section
+            </Message>
+          }
           {
             this.state.isRemoveButtonEnabled &&
-            <div>
-              <Divider />
-              <p>Remove all extension data before un-installing</p>
-              <Button color='red' onClick={this.removeBucket}>Delete</Button>
-            </div>
+            <Message negative>
+              <Message.Header>Want to Remove Push Notification</Message.Header>
+              <p> Delete the webhook <a href={this.state.webhookLink} target="_blank" rel="noopener noreferrer"><Icon name="external" /></a></p>
+              <p>Delete <b>added_webhook</b> parameter from Extension Query Parameters section.</p>
+            </Message>
           }
         </Segment>
       </Container>
