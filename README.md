@@ -1,3 +1,5 @@
+![Image](https://cosmic-s3.imgix.net/95aa3d10-c4fe-11e9-8c39-315429161746-onesignal-cosmicjs.jpg)
+
 ### Go to Cosmic JS to install the Extension
 [Install the Extension](https://cosmicjs.com/extensions/onesignal)
 
