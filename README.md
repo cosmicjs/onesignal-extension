@@ -1,4 +1,5 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+### Go to Cosmic JS to install the Extension
+[Install the Extension](https://cosmicjs.com/extensions/onesignal)
 
 ## Available Scripts
 
