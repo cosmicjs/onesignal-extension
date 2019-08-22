@@ -3,6 +3,10 @@
 ### Go to Cosmic JS to install the Extension
 [Install the Extension](https://cosmicjs.com/extensions/onesignal)
 
+Built using Create React App.
+
+Learn more about building our own Extension in the [Cosmic JS Extension docs](https://cosmicjs.com/docs/extensions/).
+
 ## Available Scripts
 
 In the project directory, you can run:
